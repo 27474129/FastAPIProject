@@ -1,7 +1,11 @@
+import logging
 from modules.context_managers import Postgresql
 from .schemas import Mailing
 from datetime import datetime
 from pytz import timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 class MailingRepository:
@@ -12,7 +16,9 @@ class MailingRepository:
             cursor.execute(f"INSERT INTO mailings (start_time, message, filters, end_time)\
              VALUES ('{mailing_data.start_time}', '{mailing_data.message}', \
             '{mailing_data.filters}', '{mailing_data.end_time}') RETURNING id;")
-            return cursor.fetchall()[0][0]
+            mailing_id = cursor.fetchall()[0][0]
+            logger.debug(f"Новая рассылка создана, ее id: {mailing_id}")
+            return mailing_id
 
     @staticmethod
     def get_mailing_by_id(mailing_id: int) -> Mailing or None:
@@ -31,6 +37,7 @@ class MailingRepository:
                 filters=mailing_data[3],
                 end_time=mailing_data[4]
             )
+            logger.debug(f"Рассылка получена, ее id: {mailing_id}")
             return mailing
 
     @staticmethod
@@ -38,14 +45,16 @@ class MailingRepository:
         with Postgresql() as connection:
             cursor = connection.cursor()
             cursor.execute(f"DELETE FROM mailings WHERE id={mailing_id};")
+        logger.debug(f"Рассылка удалена, ее id: {mailing_id}")
         return True
 
     @staticmethod
     def update_mailing(mailing_data: Mailing) -> bool:
         with Postgresql() as connection:
             cursor = connection.cursor()
-            cursor.execute(f"UPDATE mailings SET start_time={mailing_data.start_time}, \
-            message={mailing_data.message}, filters={mailing_data.filters}, end_time={mailing_data.end_time};")
+            cursor.execute(f"UPDATE mailings SET start_time='{mailing_data.start_time}', \
+            message='{mailing_data.message}', filters='{mailing_data.filters}', end_time='{mailing_data.end_time}';")
+            logger.debug("Рассылка обновлена")
         return True
 
     @staticmethod
@@ -66,6 +75,7 @@ class MessagesRepository:
                 cursor.execute(f"INSERT INTO messages (creation_time, status, mailing_id, client_id)\
                      VALUES ('{datetime.now(tz=timezone('Europe/Moscow'))}',\
                       'pending', {mailing_id}, {client[0]}) RETURNING id;")
+                logger.debug(f"Сообщение создано, id рассылки: {mailing_id} id клиента: {client[0]}")
         return True
 
     @staticmethod
