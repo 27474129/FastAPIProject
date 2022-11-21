@@ -1,0 +1,60 @@
+version: "3"
+
+services:
+  app:
+    container_name: app
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/sources/
+    depends_on:
+      - redis
+      - db
+      - adminer
+    links:
+      - redis
+
+  redis:
+    container_name: redis
+    hostname: redis
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    container_name: celery_worker
+    restart: always
+    build:
+      context: .
+    command: ["celery", "-A", "celery_", "worker", "-l", "info"]
+    links:
+      - redis
+    depends_on:
+      - app
+    volumes:
+      - .:/sources/
+
+  db:
+    container_name: postgres
+    image: postgres
+    restart: always
+    volumes:
+      - db:/var/lib/postgresql
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    environment:
+      POSTGRES_PASSWORD: "27474129"
+
+  adminer:
+    container_name: adminer
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  db: null
