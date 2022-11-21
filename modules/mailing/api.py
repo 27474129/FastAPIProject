@@ -1,3 +1,6 @@
+"""
+    Всё время указывается как московское
+"""
 import logging
 from modules.routers import mailing_router
 from .schemas import Mailing

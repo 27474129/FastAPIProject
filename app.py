@@ -21,10 +21,11 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="MailingAPI",
         version="1",
-        description="Тестовое задание",
+        description="Тестовое задание, API для рассылки",
         routes=app.routes,
     )
     app.openapi_schema = openapi_schema
+
     return app.openapi_schema
 
 

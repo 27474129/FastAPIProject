@@ -14,13 +14,16 @@ class ClientsRepository:
             cursor.execute(f"INSERT INTO clients (phone, operator_code, tag, time_zone)\
              VALUES ({client_data.phone}, {client_data.operator_code}, \
              '{client_data.tag}', '{client_data.time_zone}') RETURNING id;")
-            return cursor.fetchall()[0][0]
+            client_id = cursor.fetchall()[0][0]
+            logger.debug(f"Клиент создан, его id: {client_id}")
+            return client_id
 
     @staticmethod
     def delete_client(client_id: int) -> bool:
         with Postgresql() as connection:
             cursor = connection.cursor()
             cursor.execute(f"DELETE FROM clients WHERE id={client_id};")
+            logger.debug(f"Клиент удален, его id: {client_id}")
         return True
 
     @staticmethod
@@ -30,6 +33,7 @@ class ClientsRepository:
             cursor.execute(f"UPDATE clients SET phone={client_data.phone}, \
             operator_code={client_data.operator_code}, tag='{client_data.tag}',\
              time_zone='{client_data.time_zone}' WHERE id={client_id};")
+            logger.debug(f"Клиент обновлен, его id: {client_id}")
         return True
 
     @staticmethod
@@ -48,6 +52,7 @@ class ClientsRepository:
                 tag=client_data[3],
                 time_zone=client_data[4]
             )
+            logger.debug(f"Клиент получен, его id: {client_id}")
             return client
 
     @staticmethod
