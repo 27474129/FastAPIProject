@@ -59,6 +59,7 @@ class MailingRepository:
 class MessagesRepository:
     @staticmethod
     def create_messages_for_mailing(mailing_id: int, clients: list) -> bool:
+        # создание сообщений для рассылки через транзакцию
         with Postgresql() as connection:
             cursor = connection.cursor()
             for client in clients:

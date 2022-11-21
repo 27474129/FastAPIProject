@@ -1,6 +1,7 @@
 import json
 import requests
 import config
+import logging
 from .schemas import Message, Mailing
 from modules.clients.repository import ClientsRepository
 from modules.mailing.repository import MessagesRepository
@@ -10,8 +11,9 @@ from celery.utils.log import get_task_logger
 from datetime import datetime
 from pytz import timezone
 
-
+# celery logger
 logger = get_task_logger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class MailingService:
@@ -19,12 +21,15 @@ class MailingService:
 
     def __init__(self, mailing_id: int):
         self.mailing_id = mailing_id
+        # токен для авторизации на внешнем API
         self.headers = {"Authorization": f"Bearer {config.BEARER_TOKEN}"}
 
         mailing_data = MailingRepository.get_mailing_by_id(self.mailing_id)
         self.start_time = mailing_data.start_time
         self.message = mailing_data.message
         self.filters = mailing_data.filters
+        if self.filters != "None":
+            self.filters = self.filters.split("=")
         self.end_time = mailing_data.end_time
 
     # False - задачу нужно сразу запускать
@@ -33,6 +38,7 @@ class MailingService:
     def check_start_time(start_time: datetime):
         return False if not MailingService.compare_time(start_time) else True
 
+    # сравнивание двух объектов datetime методом конвертирования их к timezone GMT+3
     @staticmethod
     def compare_time(time: datetime) -> bool:
         zone = timezone("Europe/Moscow")
@@ -43,7 +49,13 @@ class MailingService:
             return False
 
     def start_mailing(self):
-        clients = ClientsRepository.get_clients()
+        clients = ClientsRepository.get_clients(filters=self.filters)
+        if len(clients) == 0:
+            logger.warning("Не найдено ни одного пользователя")
+            return
+
+        logger.info("Сообщения созданы")
+
         if not MessagesRepository.create_messages_for_mailing(self.mailing_id, clients):
             logger.error("Не получилось добавить сообщения в базу")
 
@@ -77,7 +89,7 @@ class MailingService:
                         logger.warning(f"Сообщение не дошло до пользователя, ответ от удаленного API: {response}")
                     elif response["message"] == "OK":
                         MessagesRepository.update_status_with_cursor(cursor, message_id, "successfully sent")
-                        logger.debug("Сообщение дошло")
+                        logger.info("Сообщение дошло")
 
                     connection.commit()
                 else:
@@ -86,6 +98,7 @@ class MailingService:
 
 
 class StatsService:
+    # метод который собирает количество успешных/неуспешных/ожидающих своей очереди сообщений
     @staticmethod
     def get_messages_statuses_count(messages: list) -> tuple:
         success_message_count = int()
@@ -101,6 +114,7 @@ class StatsService:
 
         return failed_message_count, success_message_count, pending_message_count
 
+    # метод который собирает общую статистику для всех существующих рассылок
     @staticmethod
     def get_base_stats(mailings: list) -> dict:
         base_stats = dict()
@@ -128,6 +142,7 @@ class StatsService:
 
         return base_stats
 
+    # метод который собирает статистику по конкретной рассылке
     @staticmethod
     def get_stats_for_mailing(mailing_id: int, messages: list):
         stats_for_mailing = dict({"stats": {mailing_id: dict()}})

@@ -51,8 +51,11 @@ class ClientsRepository:
             return client
 
     @staticmethod
-    def get_clients():
+    def get_clients(filters: list or str):
         with Postgresql() as connection:
             cursor = connection.cursor()
-            cursor.execute(f"SELECT * FROM clients;")
+            if filters == "None":
+                cursor.execute(f"SELECT * FROM clients;")
+            else:
+                cursor.execute(f"SELECT * FROM clients WHERE {filters[0]}='{filters[1]}';")
             return cursor.fetchall()

@@ -10,7 +10,7 @@ CREATE TABLE mailings (
     id SERIAL,
     start_time TIMESTAMP NOT NULL,
     message VARCHAR NOT NULL,
-    filters VARCHAR NOT NULL,
+    filters VARCHAR,
     end_time TIMESTAMP NOT NULL
 );
 
