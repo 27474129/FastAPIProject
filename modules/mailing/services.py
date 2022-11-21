@@ -92,8 +92,7 @@ class MailingService:
                     elif response["message"] == "OK":
                         MessagesRepository.update_status_with_cursor(cursor, message_id, "successfully sent")
                         logger.info("Сообщение дошло")
-                    from time import sleep
-                    sleep(10)
+
                     connection.commit()
                 else:
                     logger.warning("Время на отправку сообщений закончилось, не все сообщения успели доставиться")
@@ -166,17 +165,4 @@ class StatsService:
 
         return stats_for_mailing
 
-
-class CeleryService:
-    @staticmethod
-    def register_task(mailing_id: int, task_status: str) -> bool:
-        r = redis.Redis(host="redis")
-        r.set(str(mailing_id), json.dumps({"status": task_status}))
-        return True
-
-    @staticmethod
-    def change_task_status(mailing_id: int, new_status: str) -> bool:
-        r = redis.Redis(host="redis")
-        r.set(str(mailing_id), new_status)
-        return True
 

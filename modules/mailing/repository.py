@@ -49,11 +49,12 @@ class MailingRepository:
         return True
 
     @staticmethod
-    def update_mailing(mailing_data: Mailing) -> bool:
+    def update_mailing(mailing_id: int, mailing_data: Mailing) -> bool:
         with Postgresql() as connection:
             cursor = connection.cursor()
             cursor.execute(f"UPDATE mailings SET start_time='{mailing_data.start_time}', \
-            message='{mailing_data.message}', filters='{mailing_data.filters}', end_time='{mailing_data.end_time}';")
+            message='{mailing_data.message}', filters='{mailing_data.filters}', end_time='{mailing_data.end_time}'\
+             WHERE id={mailing_id};")
             logger.debug("Рассылка обновлена")
         return True
 
