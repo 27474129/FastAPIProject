@@ -1,4 +1,5 @@
 import json
+import redis
 import requests
 import config
 import logging
@@ -10,6 +11,7 @@ from modules.mailing.repository import MailingRepository
 from celery.utils.log import get_task_logger
 from datetime import datetime
 from pytz import timezone
+
 
 # celery logger
 logger = get_task_logger(__name__)
@@ -48,7 +50,7 @@ class MailingService:
         elif datetime.now(tz=timezone("Europe/Moscow")) < time:
             return False
 
-    def start_mailing(self):
+    def start_mailing(self) -> None:
         clients = ClientsRepository.get_clients(filters=self.filters)
         if len(clients) == 0:
             logger.warning("Не найдено ни одного пользователя")
@@ -90,7 +92,8 @@ class MailingService:
                     elif response["message"] == "OK":
                         MessagesRepository.update_status_with_cursor(cursor, message_id, "successfully sent")
                         logger.info("Сообщение дошло")
-
+                    from time import sleep
+                    sleep(10)
                     connection.commit()
                 else:
                     logger.warning("Время на отправку сообщений закончилось, не все сообщения успели доставиться")
@@ -144,7 +147,7 @@ class StatsService:
 
     # метод который собирает статистику по конкретной рассылке
     @staticmethod
-    def get_stats_for_mailing(mailing_id: int, messages: list):
+    def get_stats_for_mailing(mailing_id: int, messages: list) -> dict:
         stats_for_mailing = dict({"stats": {mailing_id: dict()}})
         failed_message_count, success_message_count, pending_message_count = \
             StatsService.get_messages_statuses_count(messages)
@@ -162,3 +165,18 @@ class StatsService:
                 )
 
         return stats_for_mailing
+
+
+class CeleryService:
+    @staticmethod
+    def register_task(mailing_id: int, task_status: str) -> bool:
+        r = redis.Redis(host="redis")
+        r.set(str(mailing_id), json.dumps({"status": task_status}))
+        return True
+
+    @staticmethod
+    def change_task_status(mailing_id: int, new_status: str) -> bool:
+        r = redis.Redis(host="redis")
+        r.set(str(mailing_id), new_status)
+        return True
+
